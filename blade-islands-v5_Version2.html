@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Blade Islands</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Nunito',sans-serif;overflow:hidden;}
+canvas{display:block;}
+#hud{position:fixed;top:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none;z-index:5;}
+.hb{background:rgba(0,0,0,.82);border:1px solid #2a2a4a;border-radius:7px;padding:3px 9px;color:#fff;font-size:.74rem;font-weight:700;white-space:nowrap;}
+.hb span{color:#ffd700;}
+#hp-wrap{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.82);border:1px solid #2a2a4a;border-radius:7px;padding:3px 9px;}
+#hp-wrap label{color:#e74c3c;font-size:.72rem;font-weight:800;}
+#hp-track{width:130px;height:9px;background:#1a1a2a;border-radius:99px;overflow:hidden;}
+#hp-fill{height:100%;background:linear-gradient(90deg,#e74c3c,#ff7675);border-radius:99px;transition:width .15s;}
+#xp-track{width:90px;height:6px;background:#1a1a2a;border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:4px;}
+#xp-fill{height:100%;background:linear-gradient(90deg,#ffd700,#f9ca24);border-radius:99px;transition:width .3s;}
+#aura-row{position:fixed;top:46px;left:8px;display:flex;gap:3px;flex-wrap:wrap;pointer-events:none;z-index:5;max-width:98vw;}
+.ap{padding:2px 7px;border-radius:99px;font-size:.64rem;font-weight:800;border:1px solid rgba(255,255,255,.2);color:#fff;}
+#emblem-row{position:fixed;top:70px;right:8px;display:flex;flex-direction:column;gap:3px;pointer-events:none;z-index:5;}
+.emb-pill{background:rgba(0,0,0,.8);border:1px solid #ffd70055;border-radius:8px;padding:2px 8px;font-size:.64rem;color:#ffd700;font-weight:800;}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.93);z-index:20;}
+.screen h1{font-family:'Cinzel',serif;font-size:2.4rem;color:#ffd700;text-shadow:0 0 30px #ffd700aa;margin-bottom:.6rem;text-align:center;}
+.screen p{color:#999;text-align:center;max-width:460px;margin-bottom:1.4rem;font-size:.88rem;line-height:1.7;}
+.btn{padding:.6rem 1.8rem;background:linear-gradient(135deg,#e94560,#c0392b);color:#fff;border:none;border-radius:99px;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 18px rgba(233,69,96,.4);transition:transform .15s;pointer-events:all;}
+.btn:hover{transform:translateY(-2px);}
+.btn-blue{background:linear-gradient(135deg,#2980b9,#1a5276);}
+#phase-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.96);z-index:18;padding:1rem;overflow-y:auto;}
+.ps-glow{font-family:'Cinzel',serif;font-size:1.9rem;color:#ffd700;text-shadow:0 0 20px #ffd700;text-align:center;margin-bottom:.3rem;}
+.ps-sub{color:#888;font-size:.83rem;text-align:center;margin-bottom:.9rem;}
+.ps-stats{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem;}
+.ps-stat{background:#0d0d22;border:1px solid #ffd70044;border-radius:99px;padding:.25rem .85rem;font-size:.8rem;font-weight:800;color:#ffd700;}
+.ps-aura-box{border:2px solid;border-radius:16px;padding:1.1rem 1.6rem;text-align:center;max-width:360px;margin:0 auto 1rem;}
+.pa-icon{font-size:2.6rem;margin-bottom:.35rem;}
+.pa-name{font-family:'Cinzel',serif;font-size:1rem;margin-bottom:.25rem;}
+.pa-desc{color:#888;font-size:.78rem;line-height:1.5;}
+.pa-tier{font-size:.66rem;font-weight:800;padding:.12rem .55rem;border-radius:99px;display:inline-block;margin-bottom:.35rem;}
+.tier1{background:#1a3a1a;color:#2ecc71;}.tier2{background:#1a1a3a;color:#74b9ff;}.tier3{background:#3a1a00;color:#ffd700;}
+.tier-secret{background:#2a002a;color:#ff79c6;animation:spulse .9s infinite alternate;}
+@keyframes spulse{from{box-shadow:0 0 4px #ff79c6}to{box-shadow:0 0 14px #ff79c6}}
+#bp-screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;background:rgba(0,0,0,.96);z-index:15;padding:1rem;overflow-y:auto;}
+#bp-screen h2{font-family:'Cinzel',serif;color:#ffd700;font-size:1.4rem;margin:.4rem 0 .25rem;}
+.bp-tabs{display:flex;gap:.4rem;margin-bottom:.7rem;pointer-events:all;}
+.bp-tab{padding:.35rem 1rem;border:1px solid #333;border-radius:99px;color:#666;font-size:.78rem;font-weight:800;cursor:pointer;background:none;}
+.bp-tab.active{background:#ffd700;color:#000;border-color:#ffd700;}
+#bp-content{max-width:860px;width:100%;pointer-events:all;}
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.4rem;}
+.pl-item{background:#0a0a15;border:1px solid #1a1a3a;border-radius:9px;padding:.55rem .8rem;font-size:.73rem;}
+.pl-item.done{border-color:#ffd70033;}
+.pl-req{color:#555;font-weight:800;}.pl-item.done .pl-req{color:#ffd700;}
+.pl-aura{color:#333;margin-top:.15rem;}.pl-item.done .pl-aura{color:inherit;}
+.emb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.4rem;}
+.el-item{background:#0a0a15;border:1px solid #ffd70022;border-radius:9px;padding:.55rem .8rem;display:flex;gap:.5rem;align-items:center;}
+.el-icon{font-size:1.3rem;}.el-name{font-size:.78rem;font-weight:800;color:#ffd700;}.el-desc{font-size:.68rem;color:#555;}.el-bonus{font-size:.68rem;color:#2ecc71;margin-top:.1rem;}
+#warn{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:25;}
+#warn-box{background:#0f0509;border:2px solid #e74c3c;border-radius:16px;padding:1.4rem 1.8rem;text-align:center;max-width:390px;}
+#warn-box h3{color:#e74c3c;font-family:'Cinzel',serif;font-size:1.15rem;margin-bottom:.4rem;}
+#warn-box p{color:#aaa;font-size:.84rem;line-height:1.6;margin-bottom:1.1rem;}
+.warn-btns{display:flex;gap:.6rem;justify-content:center;pointer-events:all;}
+#banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.92);border:2px solid #ffd700;border-radius:14px;padding:.75rem 1.8rem;color:#ffd700;font-family:'Cinzel',serif;font-size:.9rem;pointer-events:none;opacity:0;transition:opacity .4s;z-index:8;text-align:center;}
+#water-warn{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(0,100,200,.7);border:1px solid #3498db;border-radius:99px;padding:.3rem 1rem;color:#fff;font-size:.75rem;font-weight:800;pointer-events:none;opacity:0;transition:opacity .3s;z-index:7;}
+#bp-btn{position:fixed;bottom:34px;right:10px;background:rgba(0,0,0,.85);border:1.5px solid #9b59b6;color:#9b59b6;padding:.36rem .82rem;border-radius:8px;font-size:.74rem;font-weight:800;cursor:pointer;z-index:6;}
+#ctrl{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);color:#1a1a1a;font-size:.64rem;pointer-events:none;white-space:nowrap;}
+#end-screen{display:none;}
+#isle-indicator{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);border:1px solid #ffd70055;border-radius:99px;padding:.28rem .9rem;color:#ffd700;font-size:.72rem;font-weight:800;pointer-events:none;z-index:6;}
+#eye-cd{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:2px solid #9b59b6;border-radius:99px;padding:.3rem 1.2rem;color:#a29bfe;font-size:.78rem;font-weight:800;pointer-events:none;z-index:6;display:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="hp-wrap"><label>❤️</label><div id="hp-track"><div id="hp-fill"></div></div></div>
+  <div class="hb">🗡️<span id="h-dmg">1.0</span></div>
+  <div class="hb">💀<span id="h-kills">0</span></div>
+  <div class="hb">⚡<span id="h-spd">3.5</span></div>
+  <div class="hb">🏝️<span id="h-isl">Isla 1</span></div>
+  <div class="hb">🌟Fase<span id="h-phase">0</span></div>
+  <div class="hb">🏅<span id="h-emb">0</span></div>
+  <div class="hb">XP<div id="xp-track"><div id="xp-fill"></div></div></div>
+</div>
+<div id="aura-row"></div>
+<div id="emblem-row"></div>
+<div id="banner"></div>
+<div id="water-warn">💧 ¡CUIDADO — AGUA!</div>
+<div id="isle-indicator">🏝️ Isla 1</div>
+<button id="bp-btn" onclick="openBP()">🎒 Mochila (B)</button>
+<div id="eye-cd">👁️ Listo</div>
+<div id="ctrl">⬅️➡️ Mover | ↑/Esp Saltar | Z Atacar | X Especial | E 👁️Ojo (Fase 75) | B Mochila</div>
+
+<div class="screen" id="start-screen">
+  <h1>⚔️ Blade Islands</h1>
+  <p>Salta entre <b style="color:#ffd700">20 islas</b> sobre el agua. ¡Si caes, mueres!<br>
+  Cada isla da más kills por enemigo. Las auras se combinan entre sí.<br>
+  Descubre fases secretas y colecciona emblemas 🤫</p>
+  <button class="btn" onclick="startGame()">▶ Comenzar</button>
+</div>
+
+<div id="phase-screen"></div>
+
+<div id="bp-screen">
+  <h2>🎒 Mochila</h2>
+  <div class="bp-tabs">
+    <button class="bp-tab active" onclick="bpTab('phases',this)">🌟 Fases</button>
+    <button class="bp-tab" onclick="bpTab('auras',this)">✨ Auras</button>
+    <button class="bp-tab" onclick="bpTab('emblems',this)">🏅 Emblemas</button>
+  </div>
+  <div id="bp-content"></div>
+  <br><button class="btn btn-blue" onclick="closeBP()" style="pointer-events:all;margin-bottom:1rem">✕ Cerrar</button>
+</div>
+
+<div id="warn">
+  <div id="warn-box">
+    <h3 id="warn-title">⚠️ ¡Zona Peligrosa!</h3>
+    <p id="warn-msg"></p>
+    <div class="warn-btns">
+      <button class="btn" id="warn-go">💀 Ir de todas formas</button>
+      <button class="btn btn-blue" onclick="document.getElementById('warn').style.display='none'">← Volver</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="end-screen">
+  <h1 id="end-title"></h1>
+  <p id="end-msg"></p>
+  <button class="btn" onclick="location.reload()">🔄 Jugar de nuevo</button>
+</div>
+
+<script>
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+function resize(){C.width=Math.min(innerWidth,920);C.height=Math.min(innerHeight-4,540);}
+resize();window.addEventListener('resize',resize);
+
+const ISL_DATA=[
+  {id:1, name:"Hierba",      emoji:"🌿",sky:"#0d1f0d",ground:"#2d5a27",accent:"#2ecc71",eHp:4,   eDmg:.5,  eSpd:1.0,danger:0,killMult:1,  npcBonus:0, wx:0,     iw:700},
+  {id:2, name:"Arena",       emoji:"🏖️",sky:"#1f150a",ground:"#7a5c2a",accent:"#e67e22",eHp:9,   eDmg:1.2, eSpd:1.1,danger:1,killMult:2,  npcBonus:0, wx:900,   iw:700},
+  {id:3, name:"Hielo",       emoji:"❄️",sky:"#0a1828",ground:"#3a6a8a",accent:"#74b9ff",eHp:22,  eDmg:2.5, eSpd:1.2,danger:1,killMult:3,  npcBonus:0, wx:1800,  iw:700},
+  {id:4, name:"Mercado",     emoji:"🏪",sky:"#0a1020",ground:"#1a3a5a",accent:"#3498db",eHp:15,  eDmg:1.0, eSpd:1.0,danger:0,killMult:2,  npcBonus:5, wx:2700,  iw:620},
+  {id:5, name:"Fuego",       emoji:"🔥",sky:"#1f0500",ground:"#8b2500",accent:"#e74c3c",eHp:50,  eDmg:5,   eSpd:1.3,danger:2,killMult:5,  npcBonus:0, wx:3500,  iw:700},
+  {id:6, name:"Trampa",      emoji:"⚠️",sky:"#1a0a2a",ground:"#5a3a7a",accent:"#9b59b6",eHp:30,  eDmg:8,   eSpd:.7, danger:2,killMult:4,  npcBonus:0, wx:4400,  iw:650},
+  {id:7, name:"Trueno",      emoji:"⚡",sky:"#05050f",ground:"#2a2a6a",accent:"#f1c40f",eHp:120, eDmg:12,  eSpd:1.5,danger:3,killMult:8,  npcBonus:0, wx:5250,  iw:750},
+  {id:8, name:"Templo",      emoji:"🏛️",sky:"#101005",ground:"#3a3a10",accent:"#ffd700",eHp:200, eDmg:10,  eSpd:1.4,danger:2,killMult:6,  npcBonus:8, wx:6200,  iw:650},
+  {id:9, name:"Bosque Rojo", emoji:"🍂",sky:"#1a0800",ground:"#5a2010",accent:"#c0392b",eHp:280, eDmg:18,  eSpd:1.5,danger:3,killMult:10, npcBonus:0, wx:7050,  iw:700},
+  {id:10,name:"Sombra",      emoji:"🌑",sky:"#050505",ground:"#111",   accent:"#8e44ad",eHp:400, eDmg:25,  eSpd:1.7,danger:3,killMult:14, npcBonus:0, wx:7950,  iw:750},
+  {id:11,name:"Tormenta",    emoji:"🌩️",sky:"#020510",ground:"#0a0a2a",accent:"#74b9ff",eHp:600, eDmg:35,  eSpd:1.8,danger:3,killMult:18, npcBonus:0, wx:8900,  iw:800},
+  {id:12,name:"Volcán",      emoji:"🌋",sky:"#200000",ground:"#4a0800",accent:"#ff6b35",eHp:900, eDmg:50,  eSpd:1.9,danger:4,killMult:25, npcBonus:0, wx:9900,  iw:800},
+  {id:13,name:"Cristal",     emoji:"💎",sky:"#050e15",ground:"#1a3a4a",accent:"#00cec9",eHp:1200,eDmg:65,  eSpd:1.9,danger:4,killMult:30, npcBonus:0, wx:10900, iw:800},
+  {id:14,name:"Neón",        emoji:"🌈",sky:"#050010",ground:"#1a0028",accent:"#fd79a8",eHp:1800,eDmg:80,  eSpd:2.0,danger:4,killMult:40, npcBonus:0, wx:11900, iw:800},
+  {id:15,name:"Desierto",    emoji:"🏜️",sky:"#1a1000",ground:"#5a4010",accent:"#f39c12",eHp:2500,eDmg:100, eSpd:1.8,danger:4,killMult:50, npcBonus:0, wx:12900, iw:850},
+  {id:16,name:"Abismo",      emoji:"🕳️",sky:"#020202",ground:"#0a0a0a",accent:"#c0392b",eHp:4000,eDmg:130, eSpd:2.0,danger:5,killMult:70, npcBonus:0, wx:13950, iw:900},
+  {id:17,name:"Ruinas",      emoji:"🏚️",sky:"#0a0500",ground:"#2a1500",accent:"#e67e22",eHp:6000,eDmg:160, eSpd:2.1,danger:5,killMult:90, npcBonus:0, wx:15050, iw:900},
+  {id:18,name:"Espacio",     emoji:"🌌",sky:"#000005",ground:"#050015",accent:"#a29bfe",eHp:9000,eDmg:200, eSpd:2.2,danger:5,killMult:120,npcBonus:0, wx:16150, iw:950},
+  {id:19,name:"Caos",        emoji:"💀",sky:"#050000",ground:"#150000",accent:"#e74c3c",eHp:15000,eDmg:300,eSpd:2.3,danger:5,killMult:150,npcBonus:0, wx:17300, iw:950},
+  {id:20,name:"Jefe Final",  emoji:"👑",sky:"#0f0000",ground:"#2a0000",accent:"#ffd700",eHp:30000,eDmg:500,eSpd:2.5,danger:5,killMult:250,npcBonus:0, wx:18450, iw:1000},
+];
+const WORLD_W=ISL_DATA[ISL_DATA.length-1].wx+ISL_DATA[ISL_DATA.length-1].iw+200;
+
+const AURAS=[
+  {id:"fire",   icon:"🔥",name:"Aura Fuego",   color:"#e74c3c",glow:"#ff6b6b",tier:1,desc:"+15% daño",          apply:p=>{p.auraDmgMult+=.15;},visual:"fire"},
+  {id:"ice",    icon:"❄️",name:"Aura Hielo",   color:"#74b9ff",glow:"#3498db",tier:1,desc:"Enemigos 15% lentos", apply:p=>{p.slowMult+=.15;},visual:"ice"},
+  {id:"nature", icon:"🌿",name:"Aura Natural", color:"#2ecc71",glow:"#55efc4",tier:1,desc:"Regen 1HP/seg",       apply:p=>{p.hpRegen+=1;},visual:"nature"},
+  {id:"shadow", icon:"🌑",name:"Aura Sombra",  color:"#8e44ad",glow:"#a29bfe",tier:1,desc:"+20% velocidad",      apply:p=>{p.speed*=1.2;},visual:"shadow"},
+  {id:"storm",  icon:"⚡",name:"Aura Tormenta",color:"#f1c40f",glow:"#fdcb6e",tier:1,desc:"+20% vel. ataque",    apply:p=>{p.atkCd*=.80;},visual:"storm"},
+  {id:"blood",  icon:"🩸",name:"Aura Sangre",  color:"#c0392b",glow:"#e74c3c",tier:1,desc:"Roba 2HP/kill",       apply:p=>{p.lifeSteal+=2;},visual:"blood"},
+  {id:"earth",  icon:"🌍",name:"Aura Tierra",  color:"#7f8c8d",glow:"#95a5a6",tier:1,desc:"+40 HP máx.",         apply:p=>{p.maxHp+=40;p.hp=Math.min(p.hp+40,p.maxHp);},visual:"earth"},
+  {id:"wind",   icon:"🌪️",name:"Aura Viento",  color:"#a29bfe",glow:"#6c5ce7",tier:1,desc:"+3 saltos extra",     apply:p=>{p.extraJumps+=3;},visual:"wind"},
+  {id:"golden", icon:"✨",name:"Aura Dorada",  color:"#ffd700",glow:"#f9ca24",tier:2,desc:"+10dmg & +50HP",       apply:p=>{p.damage+=10;p.maxHp+=50;p.hp=Math.min(p.hp+50,p.maxHp);},visual:"golden"},
+  {id:"chaos",  icon:"🌀",name:"Aura Caos",    color:"#d63031",glow:"#ff7675",tier:2,desc:"+25% crit & +5dmg",    apply:p=>{p.critChance+=.25;p.damage+=5;},visual:"chaos"},
+  {id:"ocean",  icon:"🌊",name:"Aura Oceánica",color:"#0984e3",glow:"#74b9ff",tier:2,desc:"Salto infinito",       apply:p=>{p.extraJumps=999;},visual:"ocean"},
+  {id:"crystal",icon:"💎",name:"Aura Cristal", color:"#00cec9",glow:"#55efc4",tier:2,desc:"Escudo auto 30s",      apply:p=>{p.autoShield=true;},visual:"crystal"},
+  {id:"void",   icon:"🕳️",name:"Aura Vacío",   color:"#2d3436",glow:"#636e72",tier:2,desc:"+100HP & +10dmg",      apply:p=>{p.maxHp+=100;p.hp=Math.min(p.hp+100,p.maxHp);p.damage+=10;},visual:"void"},
+  {id:"lava",   icon:"🌋",name:"Aura Lava",    color:"#e17055",glow:"#fd79a8",tier:2,desc:"+30%dmg & regen2",     apply:p=>{p.auraDmgMult+=.30;p.hpRegen+=2;},visual:"lava"},
+  {id:"wings",  icon:"🪽",name:"Alas Celestiales",color:"#dfe6e9",glow:"#b2bec3",tier:3,desc:"Alas + salto∞ + +20dmg",apply:p=>{p.hasWings=true;p.extraJumps=999;p.damage+=20;},visual:"wings"},
+  {id:"disc",   icon:"💿",name:"Disco Eléctrico",color:"#f1c40f",glow:"#fdcb6e",tier:3,desc:"Disco giratorio + atk×2",apply:p=>{p.hasDisc=true;p.atkCd*=.5;},visual:"disc"},
+  {id:"halo",   icon:"😇",name:"Halo Sagrado", color:"#ffeaa7",glow:"#fdcb6e",tier:3,desc:"Halo + regen5/s + +30HP",apply:p=>{p.hasHalo=true;p.hpRegen+=5;p.maxHp+=30;p.hp=Math.min(p.hp+30,p.maxHp);},visual:"halo"},
+  {id:"nova",   icon:"💥",name:"Nova Oscura",   color:"#8e44ad",glow:"#a29bfe",tier:3,desc:"Anillo energía + +40% crit",apply:p=>{p.hasNova=true;p.critChance+=.4;},visual:"nova"},
+  {id:"dragon", icon:"🐉",name:"Aura Dragón",   color:"#e74c3c",glow:"#ff6b6b",tier:3,desc:"Llamas + dmg×2",       apply:p=>{p.hasDragon=true;p.damage*=2;},visual:"dragon"},
+  {id:"s_cosmos",icon:"🌌",name:"Cosmos",       color:"#6c5ce7",glow:"#a29bfe",tier:"secret",desc:"Todo aumentado x3",apply:p=>{p.damage*=3;p.speed*=1.5;p.maxHp+=500;p.hp=Math.min(p.hp+500,p.maxHp);p.hasNova=true;p.hasWings=true;},visual:"nova"},
+  {id:"s_death", icon:"💀",name:"Muerte",       color:"#2d3436",glow:"#b2bec3",tier:"secret",desc:"Vampiro extremo",  apply:p=>{p.lifeSteal+=20;p.critChance+=.5;p.damage+=100;},visual:"disc"},
+  {id:"s_god",   icon:"⚡",name:"Dios",         color:"#ffd700",glow:"#fff",  tier:"secret",desc:"Poder de los dioses",apply:p=>{p.damage*=5;p.hpRegen+=20;p.hasWings=true;p.hasDisc=true;p.hasHalo=true;},visual:"wings"},
+  {id:"s_time",  icon:"⏳",name:"Tiempo",       color:"#00cec9",glow:"#55efc4",tier:"secret",desc:"Velocidad extrema", apply:p=>{p.atkCd*=.1;p.speed*=2;p.extraJumps=999;},visual:"halo"},
+];
+
+const PHASES=[
+  {req:5,     label:"Fase 1",  dmg:1, hp:10,spd:.05,jump:.02,aura:0},
+  {req:10,    label:"Fase 2",  dmg:1, hp:15,spd:.05,jump:.02,aura:1},
+  {req:25,    label:"Fase 3",  dmg:2, hp:20,spd:.1, jump:.03,aura:2},
+  {req:50,    label:"Fase 4",  dmg:2, hp:20,spd:.1, jump:.03,aura:3},
+  {req:75,    label:"Fase 5",  dmg:1, hp:5, spd:.02,jump:.01,aura:4, eyeUnlock:true},
+  {req:100,   label:"Fase 6",  dmg:3, hp:30,spd:.15,jump:.04,aura:5},
+  {req:250,   label:"Fase 7",  dmg:5, hp:40,spd:.2, jump:.05,aura:6},
+  {req:500,   label:"Fase 8",  dmg:5, hp:50,spd:.2, jump:.05,aura:7},
+  {req:750,   label:"Fase 9",  dmg:8, hp:60,spd:.25,jump:.06,aura:8},
+  {req:1000,  label:"Fase 10", dmg:10,hp:75,spd:.25,jump:.06,aura:9},
+  {req:2500,  label:"Fase 11", dmg:15,hp:100,spd:.3,jump:.08,aura:10},
+  {req:5000,  label:"Fase 12", dmg:20,hp:120,spd:.3,jump:.08,aura:14},
+  {req:7500,  label:"Fase 13", dmg:25,hp:150,spd:.4,jump:.1, aura:11},
+  {req:10000, label:"Fase 14", dmg:35,hp:200,spd:.4,jump:.1, aura:15},
+  {req:25000, label:"Fase 15", dmg:50,hp:250,spd:.5,jump:.12,aura:12},
+  {req:50000, label:"Fase 16", dmg:75,hp:300,spd:.5,jump:.12,aura:16},
+  {req:75000, label:"Fase 17", dmg:100,hp:350,spd:.6,jump:.15,aura:13},
+  {req:100000,label:"Fase 18", dmg:150,hp:500,spd:.6,jump:.15,aura:17},
+  {req:250000,label:"Fase 19", dmg:200,hp:600,spd:.8,jump:.2, aura:18},
+  {req:500000,label:"Fase 20", dmg:300,hp:800,spd:.8,jump:.2, aura:8},
+  {req:750000,label:"Fase 21", dmg:400,hp:1000,spd:1,jump:.3, aura:9},
+  {req:1000000,label:"Fase Final",dmg:0,hp:0,spd:0,jump:0,win:true},
+  {req:5000000, label:"???",dmg:1000,hp:2000,spd:2,jump:.5,aura:19,secret:true},
+  {req:15000000,label:"???",dmg:2000,hp:5000,spd:3,jump:.8,aura:20,secret:true},
+  {req:50000000,label:"???",dmg:5000,hp:10000,spd:4,jump:1, aura:21,secret:true},
+  {req:150000000,label:"???",dmg:9999,hp:99999,spd:5,jump:1.5,aura:22,secret:true},
+];
+
+const EMBLEM_DEFS=[
+  {id:"swift",icon:"🏃",name:"Emblema Veloz",  desc:"+5% velocidad",bonus:"+5% vel",   apply:p=>{p.speed*=1.05;}},
+  {id:"iron", icon:"🛡️",name:"Emblema Hierro", desc:"+20 HP máx.",  bonus:"+20 HP",    apply:p=>{p.maxHp+=20;p.hp=Math.min(p.hp+20,p.maxHp);}},
+  {id:"blade",icon:"⚔️",name:"Emblema Filo",   desc:"+3 daño",      bonus:"+3 dmg",    apply:p=>{p.damage+=3;}},
+  {id:"hunt", icon:"🎯",name:"Emblema Cazador",desc:"+5% crit",     bonus:"+5% crit",  apply:p=>{p.critChance+=.05;}},
+  {id:"leech",icon:"🩸",name:"Emblema Vampiro",desc:"+1 robo vida", bonus:"+1 HP/kill",apply:p=>{p.lifeSteal+=1;}},
+  {id:"jump", icon:"🦘",name:"Emblema Saltarín",desc:"+1 salto",    bonus:"+1 salto",  apply:p=>{p.extraJumps+=1;}},
+  {id:"fury", icon:"😤",name:"Emblema Furia",  desc:"+10% atk spd",bonus:"+10% atkspd",apply:p=>{p.atkCd*=.9;}},
+  {id:"titan",icon:"💪",name:"Emblema Titán",  desc:"+50HP +5dmg",  bonus:"+50HP,+5dmg",apply:p=>{p.maxHp+=50;p.hp=Math.min(p.hp+50,p.maxHp);p.damage+=5;}},
+];
+
+const DROP_TYPES=[
+  {icon:'❤️',color:'#e74c3c',apply:p=>{p.hp=Math.min(p.hp+30,p.maxHp);addFloat('+30HP',p.x,p.y-24,'#2ecc71');}},
+  {icon:'⚡',color:'#f1c40f',apply:p=>{p.speed*=1.1;addFloat('+Vel',p.x,p.y-24,'#f1c40f');}},
+  {icon:'🗡️',color:'#e74c3c',apply:p=>{p.damage+=5;addFloat('+5DMG',p.x,p.y-24,'#e74c3c');}},
+  {icon:'💎',color:'#00cec9',apply:p=>{p.atkCd*=.9;addFloat('+AtkSpd',p.x,p.y-24,'#00cec9');}},
+  {icon:'🌟',color:'#ffd700',apply:p=>{p.maxHp+=25;p.hp=Math.min(p.hp+25,p.maxHp);addFloat('+25MaxHP',p.x,p.y-24,'#ffd700');}},
+];
+
+let G={},keys={},running=false;
+
+function startGame(){
+  document.getElementById('start-screen').style.display='none';
+  running=true; init(); loop();
+}
+
+function getIslandAt(wx){
+  for(let i=ISL_DATA.length-1;i>=0;i--){
+    const isl=ISL_DATA[i];
+    if(wx>=isl.wx&&wx<=isl.wx+isl.iw)return i;
+  }
+  return -1;
+}
+
+function init(){
+  const H=C.height;
+  const waterY=H-60;
+  const groundY=waterY-30;
+  G={
+    H,waterY,groundY,
+    kills:0,phase:0,nextPhaseIdx:0,
+    paused:false,floats:[],particles:[],drops:[],npcs:[],enemies:[],
+    cam:{x:0},spawnTimer:0,spawnInterval:90,
+    shieldAutoTimer:0,
+    player:{
+      x:ISL_DATA[0].wx+100,y:groundY-48,
+      w:32,h:48,vx:0,vy:0,onGround:false,facing:1,
+      hp:100,maxHp:100,damage:1,speed:3.5,jumpPower:13,
+      jumpsLeft:1,extraJumps:0,
+      atkCd:300,lastAtk:0,attacking:false,atkTimer:0,swordRange:55,
+      special:null,specialCd:0,
+      shieldActive:false,shieldTimer:0,
+      spinActive:false,spinTimer:0,
+      critChance:.05,lifeSteal:0,hpRegen:0,regenTimer:0,
+      auraDmgMult:0,slowMult:0,dropMult:1,autoShield:false,
+      hasWings:false,hasDisc:false,hasHalo:false,hasNova:false,hasDragon:false,
+      auras:[],emblems:[],dead:false,
+      discAngle:0,wingAngle:0,
+      hasEye:false,eyeActive:false,eyeState:null,eyeTimer:0,eyeLastUsed:0,
+      eyeTargetX:0,eyeTargetY:0,eyeRadius:80,
+    },
+    platforms:buildWorld(),
+  };
+  G.eyeBeams=[];G.eyeExplosions=[];
+  spawnIslandNPCs();
+  for(let i=0;i<3;i++)spawnEnemy();
+  updateHUD();
+  showBanner('🌿 Isla de Hierba','¡Salta entre islas sobre el agua!');
+}
+
+function buildWorld(){
+  const H=C.height, waterY=H-60, groundY=waterY-30;
+  const platforms=[];
+  ISL_DATA.forEach(isl=>{
+    platforms.push({x:isl.wx,y:groundY,w:isl.iw,h:90,islIdx:ISL_DATA.indexOf(isl)});
+    const count=Math.floor(isl.iw/180);
+    for(let i=0;i<count;i++){
+      platforms.push({
+        x:isl.wx+80+i*Math.floor(isl.iw/count),
+        y:groundY-100-Math.random()*80,
+        w:110+Math.random()*60,h:14,
+        islIdx:ISL_DATA.indexOf(isl)
+      });
+    }
+    if(ISL_DATA.indexOf(isl)<ISL_DATA.length-1){
+      const nextIsl=ISL_DATA[ISL_DATA.indexOf(isl)+1];
+      const gapMid=(isl.wx+isl.iw+nextIsl.wx)/2;
+      const gap=nextIsl.wx-(isl.wx+isl.iw);
+      if(gap>300){
+        platforms.push({x:gapMid-55,y:groundY-60,w:110,h:14,islIdx:-1});
+      }
+    }
+  });
+  return platforms;
+}
+
+function spawnIslandNPCs(){
+  G.npcs=[];
+  ISL_DATA.forEach((isl,i)=>{
+    if(isl.npcBonus>0){
+      for(let n=0;n<3;n++){
+        G.npcs.push({
+          x:isl.wx+100+n*150,y:G.groundY-44,w:28,h:44,
+          bonus:isl.npcBonus,talked:false,
+          color:['#3498db','#2ecc71','#e67e22'][n],
+          label:'+'+isl.npcBonus+' kills',islIdx:i
+        });
+      }
+    }
+  });
+}
+
+function spawnEnemy(){
+  const p=G.player;
+  const ci=Math.max(0,getIslandAt(p.x));
+  const isl=ISL_DATA[ci];
+  const side=Math.random()>.5?1:-1;
+  const sx=p.x+side*(200+Math.random()*300);
+  const ex=Math.max(isl.wx+30,Math.min(isl.wx+isl.iw-30,sx));
+  const types=['grunt','archer','knight','mage'];
+  const type=types[Math.floor(Math.random()*Math.min(ci+2,types.length))];
+  const isBoss=G.enemies.filter(e=>e.isBoss).length===0&&Math.random()<.04&&G.kills>5;
+  const slow=1-p.slowMult;
+  const hp=Math.round(isl.eHp*(1+G.kills*.0006)*(isBoss?8:1));
+  G.enemies.push({
+    x:ex,y:G.groundY-52,w:isBoss?58:34,h:isBoss?68:50,
+    vx:0,vy:0,onGround:false,facing:-side,
+    hp,maxHp:hp,
+    damage:isl.eDmg*(isBoss?4:1),
+    speed:isl.eSpd*slow*(isBoss?.75:1)*(.85+Math.random()*.3),
+    type,isBoss,color:isBoss?'#ffd700':isl.accent,
+    atkTimer:0,atkCd:isBoss?65:105,aggro:false,aggroRange:isBoss?500:280,
+    dead:false,islIdx:ci,killMult:isl.killMult,
+    ability:ci>=5&&Math.random()<.3?['dash','teleport','shoot'][ci%3]:null,
+    abilityTimer:0,projectiles:[],
+  });
+}
+
+function loop(){
+  if(!running)return;
+  requestAnimationFrame(loop);
+  if(G.paused)return;
+  update();render();
+}
+
+function update(){
+  const p=G.player;
+  if(p.dead)return;
+  const now=performance.now();
+
+  if(p.autoShield&&!p.shieldActive){G.shieldAutoTimer++;if(G.shieldAutoTimer>1800){G.shieldAutoTimer=0;p.shieldActive=true;p.shieldTimer=180;}}
+  if(p.hpRegen>0){p.regenTimer++;if(p.regenTimer>=60){p.hp=Math.min(p.hp+p.hpRegen,p.maxHp);p.regenTimer=0;updateHUD();}}
+  p.discAngle=(p.discAngle+.05)%(Math.PI*2);
+  p.wingAngle=Math.sin(now*.003)*.18;
+
+  if(!G.paused){
+    if(keys['ArrowLeft']||keys['a']){p.vx=-p.speed;p.facing=-1;}
+    else if(keys['ArrowRight']||keys['d']){p.vx=p.speed;p.facing=1;}
+    else p.vx*=.72;
+
+    if(keys[' ']||keys['ArrowUp']||keys['w']){
+      if(p.onGround){p.vy=-p.jumpPower;p.onGround=false;p.jumpsLeft=p.extraJumps;keys[' ']=false;keys['ArrowUp']=false;}
+      else if(p.jumpsLeft>0){p.vy=-p.jumpPower*.82;p.jumpsLeft--;keys[' ']=false;keys['ArrowUp']=false;}
+    }
+    if((keys['z']||keys['Z'])&&now-p.lastAtk>p.atkCd){p.attacking=true;p.atkTimer=18;p.lastAtk=now;doAttack();}
+    if((keys['x']||keys['X'])&&p.special&&now-p.specialCd>2500){p.specialCd=now;doSpecial();}
+    if(keys['e']||keys['E']){
+      if(p.hasEye&&!p.eyeActive){
+        if(p.eyeLastUsed===0||(now-p.eyeLastUsed)>=25000){
+          activateEye(p,now);keys['e']=keys['E']=false;
+        }
+      }
+    }
+    if(keys['b']||keys['B']){keys['b']=keys['B']=false;openBP();}
+  }
+
+  p.vy+=.65; p.x+=p.vx; p.y+=p.vy;
+  p.x=Math.max(0,Math.min(WORLD_W-p.w,p.x));
+
+  p.onGround=false;
+  G.platforms.forEach(pl=>{
+    if(p.x+p.w>pl.x&&p.x<pl.x+pl.w&&p.y+p.h>pl.y&&p.y+p.h<pl.y+pl.h+16&&p.vy>=0){
+      p.y=pl.y-p.h;p.vy=0;p.onGround=true;
+    }
+  });
+
+  if(p.y+p.h>G.waterY+20){
+    if(!p.hasWings){
+      p.dead=true;
+      addFloat('💧 ¡CAÍSTE AL AGUA!',p.x,p.y-30,'#3498db',16);
+      setTimeout(()=>showEnd(false,'agua'),800);
+      return;
+    } else {
+      p.vy=-p.jumpPower*.6;
+      addFloat('🪽 ¡Las alas te salvan!',p.x,p.y-30,'#fff',13);
+    }
+  }
+
+  if(p.atkTimer>0)p.atkTimer--;else p.attacking=false;
+  if(p.shieldActive){p.shieldTimer--;if(p.shieldTimer<=0)p.shieldActive=false;}
+  if(p.spinActive){p.spinTimer--;if(p.spinTimer<=0)p.spinActive=false;else doAttack();}
+
+  const distToWater=G.waterY-(p.y+p.h);
+  const ww=document.getElementById('water-warn');
+  ww.style.opacity=distToWater<80&&distToWater>0?'1':'0';
+
+  const ci=getIslandAt(p.x);
+  const islEl=document.getElementById('isle-indicator');
+  if(ci>=0){
+    const isl=ISL_DATA[ci];
+    islEl.textContent=isl.emoji+' '+isl.name+' (×'+isl.killMult+' kills)';
+    islEl.style.borderColor=isl.accent+'55';
+  } else {
+    islEl.textContent='💧 AGUA — ¡PELIGRO!';
+    islEl.style.borderColor='#3498db';
+  }
+
+  G.npcs.forEach(npc=>{
+    if(npc.talked)return;
+    if(Math.abs(p.x-npc.x)<50&&Math.abs(p.y-npc.y)<50){
+      npc.talked=true;
+      G.kills+=npc.bonus;
+      addFloat('+'+npc.bonus+' kills!',npc.x,npc.y-30,'#ffd700',16);
+      spawnParticles(npc.x+14,npc.y+22,'#ffd700',8);
+      updateHUD();checkPhase();
+    }
+  });
+
+  G.enemies.forEach(e=>{
+    if(e.dead)return;
+    const dx=p.x-e.x;
+    if(Math.abs(dx)<e.aggroRange)e.aggro=true;
+    if(e.aggro){
+      if(e.ability==='dash'&&Math.abs(dx)<220&&e.abilityTimer<=0){e.vx=Math.sign(dx)*e.speed*5;e.abilityTimer=180;}
+      else if(e.ability==='teleport'&&Math.abs(dx)<300&&e.abilityTimer<=0){e.x=p.x+(Math.random()>.5?80:-80);e.abilityTimer=220;}
+      else if(e.ability!=='dash')e.vx=Math.sign(dx)*e.speed;
+      if(e.abilityTimer>0)e.abilityTimer--;
+      if(e.type==='archer'&&e.atkTimer>=e.atkCd){e.atkTimer=0;e.projectiles.push({x:e.x+e.w/2,y:e.y+e.h/2,vx:Math.sign(dx)*6,vy:-.5,life:90});}
+    }
+    e.vy+=.65;e.x+=e.vx;e.y+=e.vy;
+    if(e.y>G.waterY+20){e.dead=true;return;}
+    e.onGround=false;
+    G.platforms.forEach(pl=>{
+      if(pl.islIdx===e.islIdx||pl.islIdx===-1){
+        if(e.x+e.w>pl.x&&e.x<pl.x+pl.w&&e.y+e.h>pl.y&&e.y+e.h<pl.y+pl.h+16&&e.vy>=0){
+          e.y=pl.y-e.h;e.vy=0;e.onGround=true;
+        }
+      }
+    });
+    const isl=ISL_DATA[e.islIdx];
+    e.x=Math.max(isl.wx+5,Math.min(isl.wx+isl.iw-e.w,e.x));
+    e.facing=dx>0?1:-1;
+    if(e.type!=='archer'&&Math.abs(dx)<36&&Math.abs((p.y+p.h/2)-(e.y+e.h/2))<38){
+      e.atkTimer++;if(e.atkTimer>=e.atkCd){e.atkTimer=0;damagePlayer(e.damage);}
+    } else if(e.type!=='archer')e.atkTimer=Math.max(0,e.atkTimer-1);
+    else e.atkTimer++;
+    e.projectiles=e.projectiles.filter(pr=>{
+      pr.x+=pr.vx;pr.y+=pr.vy;pr.life--;
+      if(pr.y>G.waterY)return false;
+      if(Math.abs(pr.x-p.x-p.w/2)<16&&Math.abs(pr.y-p.y-p.h/2)<20){damagePlayer(e.damage*.6);return false;}
+      return pr.life>0;
+    });
+  });
+  G.enemies=G.enemies.filter(e=>!e.dead);
+
+  G.drops=G.drops.filter(d=>{
+    d.life--;
+    if(d.y>G.waterY)return false;
+    if(Math.abs(p.x+p.w/2-d.x)<28&&Math.abs(p.y+p.h/2-d.y)<28){applyDrop(d);return false;}
+    return d.life>0;
+  });
+
+  G.spawnTimer++;
+  if(G.spawnTimer>=G.spawnInterval&&G.enemies.length<7){G.spawnTimer=0;spawnEnemy();}
+
+  if(G.player.hasEye){
+    const ecd=document.getElementById('eye-cd');
+    ecd.style.display='block';
+    const elapsed2=(performance.now()-G.player.eyeLastUsed)/1000;
+    ecd.textContent=G.player.eyeActive?'👁️ ACTIVO!':(elapsed2>=25||G.player.eyeLastUsed===0)?'👁️ LISTO (E)':'👁️ '+(25-elapsed2).toFixed(1)+'s';
+    ecd.style.borderColor=G.player.eyeActive?'#e74c3c':(elapsed2>=25||G.player.eyeLastUsed===0)?'#2ecc71':'#9b59b6';
+    ecd.style.color=G.player.eyeActive?'#ff79c6':(elapsed2>=25||G.player.eyeLastUsed===0)?'#2ecc71':'#a29bfe';
+  }
+  updateEye(G.player, performance.now());
+  G.floats=G.floats.filter(f=>{f.y-=1.5;f.life--;return f.life>0;});
+  G.particles=G.particles.filter(q=>{q.x+=q.vx;q.y+=q.vy;q.vy+=.18;q.life--;return q.life>0;});
+
+  G.cam.x=Math.max(0,Math.min(WORLD_W-C.width,p.x-C.width*.38));
+}
+
+function activateEye(p, now){
+  p.hasEye=true; p.eyeActive=true; p.eyeState='appear';
+  p.eyeTimer=60; p.eyeLastUsed=now;
+  let best=null, bd=99999;
+  G.enemies.forEach(e=>{ const d=Math.hypot(e.x-p.x,e.y-p.y); if(d<bd){bd=d;best=e;} });
+  p.eyeTargetX=best?best.x+best.w/2:p.x+p.facing*250;
+  p.eyeTargetY=best?best.y+best.h/2:p.y-40;
+  p.eyeRadius=80+G.nextPhaseIdx*8;
+  addFloat('👁️ OJO ACTIVO!',p.x,p.y-42,'#a29bfe',15);
+  spawnParticles(p.x+p.w/2,p.y+p.h/2,'#a29bfe',10);
+}
+
+function updateEye(p, now){
+  if(!p.eyeActive)return;
+  p.eyeTimer--;
+  if(p.eyeState==='appear'&&p.eyeTimer<=0){
+    p.eyeState='aim'; p.eyeTimer=50;
+    addFloat('🎯 APUNTANDO...',p.x,p.y-46,'#ff79c6',12);
+  } else if(p.eyeState==='aim'&&p.eyeTimer<=0){
+    p.eyeState='beam'; p.eyeTimer=30;
+    const px2=p.x+p.w/2, py2=p.y-22;
+    const dx=p.eyeTargetX-px2, dy=p.eyeTargetY-py2;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    G.enemies.forEach(e=>{
+      const ex=e.x+e.w/2, ey=e.y+e.h/2;
+      const t=((ex-px2)*dx+(ey-py2)*dy)/(len*len);
+      const cx=px2+t*dx, cy=py2+t*dy;
+      if(Math.hypot(ex-cx,ey-cy)<50&&t>=0&&t<=1.5){
+        const eyeDmg=Math.round(p.damage*(1+p.auraDmgMult)*5*(1+G.nextPhaseIdx*.1));
+        hitEnemy(e,eyeDmg);
+        spawnParticles(e.x+e.w/2,e.y,'#a29bfe',8);
+      }
+    });
+    G.eyeBeams.push({x1:px2,y1:py2,x2:p.eyeTargetX,y2:p.eyeTargetY,life:30,maxLife:30});
+    addFloat('⚡ LASER!',p.x,p.y-46,'#ff79c6',14);
+  } else if(p.eyeState==='beam'&&p.eyeTimer<=0){
+    p.eyeState='explode'; p.eyeTimer=55;
+    const exDmg=Math.round(p.damage*(1+p.auraDmgMult)*10*(1+G.nextPhaseIdx*.15));
+    G.enemies.forEach(e=>{
+      if(Math.hypot(e.x+e.w/2-p.eyeTargetX,e.y+e.h/2-p.eyeTargetY)<p.eyeRadius) hitEnemy(e,exDmg);
+    });
+    G.eyeExplosions.push({x:p.eyeTargetX,y:p.eyeTargetY,r:0,maxR:p.eyeRadius,life:55,maxLife:55});
+    spawnParticles(p.eyeTargetX,p.eyeTargetY,'#a29bfe',22);
+    spawnParticles(p.eyeTargetX,p.eyeTargetY,'#ff79c6',16);
+    addFloat('💥 EXPLOSIÓN!',p.eyeTargetX-20,p.eyeTargetY-30,'#ff79c6',16);
+  } else if(p.eyeState==='explode'&&p.eyeTimer<=0){
+    p.eyeState=null; p.eyeActive=false;
+  }
+  G.eyeBeams=G.eyeBeams.filter(b=>{b.life--;return b.life>0;});
+  G.eyeExplosions=G.eyeExplosions.filter(ex2=>{ex2.life--;ex2.r=ex2.maxR*(1-ex2.life/ex2.maxLife);return ex2.life>0;});
+}
+
+function doAttack(){
+  const p=G.player;
+  G.enemies.forEach(e=>{
+    if(e.dead)return;
+    const dx=(e.x+e.w/2)-(p.x+p.w/2),dy=(e.y+e.h/2)-(p.y+p.h/2);
+    if(Math.abs(dx)<p.swordRange&&Math.abs(dy)<44&&(p.facing===Math.sign(dx)||p.spinActive))hitEnemy(e);
+  });
+}
+
+function hitEnemy(e, overrideDmg){
+  const p=G.player;
